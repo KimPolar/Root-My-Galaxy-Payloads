@@ -92,6 +92,10 @@ __attribute__((constructor)) static void a17_payload(void) {
    * rebooted CZG1 at the second outer prime.  Return cleanly after one outer;
    * a later app run starts with a fresh process and descriptor set. */
   setenv("GL_RWF_OUTERS", "1", 1);
+  /* A connected route whose owner/land check misses is the last safe point
+   * on CZG1: another prepare_kernel_page() has repeatedly rebooted the
+   * device.  Fail this app run instead of touching a second spray page. */
+  setenv("GL_ABORT_CONNECTED_MISS", "1", 1);
 
   pid_t chain = fork();
   if (chain < 0) {
