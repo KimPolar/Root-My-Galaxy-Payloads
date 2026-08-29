@@ -317,8 +317,12 @@ static __attribute__((always_inline)) void fix_selinux_policy(void) {
 static void slab_drain(void) {
   struct timespec up;
   clock_gettime(CLOCK_BOOTTIME, &up);
-  int waves = (up.tv_sec > 60) ? 5 : 2;
-  int batch = (up.tv_sec > 60) ? 400 : 200;
+  int waves = env_int_range("GL_SLAB_DRAIN_WAVES",
+                             (up.tv_sec > 60) ? 5 : 2, 1, 16);
+  int batch = env_int_range("GL_SLAB_DRAIN_BATCH",
+                             (up.tv_sec > 60) ? 400 : 200, 8, 400);
+  pr_info("slab drain: waves=%d batch=%d uptime=%lld\n", waves, batch,
+          (long long)up.tv_sec);
   for (int wave = 0; wave < waves; wave++) {
     pid_t *drain = calloc(batch, sizeof(pid_t));
     int n = 0;
