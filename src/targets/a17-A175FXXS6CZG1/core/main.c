@@ -199,7 +199,14 @@ void *owner_thread(void *arg __attribute__((unused))) {
   atomic_store(&owner_started, 1);
   futex_op(&f_pi_chain, FUTEX_LOCK_PI, 0, NULL, NULL, 0);
   atomic_store(&owner_chain_done, 1);
-  for (;;) sleep(1);
+  /* The waiter has completed the forged route before handing f_pi_chain to
+   * us.  Keeping this owner alive used to leave both PI futexes owned while
+   * reset_main_route_state() zeroed and reused their words on the next
+   * round, which can panic inside select(). */
+  while (!atomic_load(&route_done)) usleep(1000);
+  futex_op(&f_pi_chain, FUTEX_UNLOCK_PI, 0, NULL, NULL, 0);
+  futex_op(&f_pi_target, FUTEX_UNLOCK_PI, 0, NULL, NULL, 0);
+  return NULL;
 }
 
 void *consumer_thread(void *arg __attribute__((unused))) {
@@ -262,9 +269,6 @@ void run_main_route_threads(void) {
   pthread_t waiter, owner, consumer;
   SYSCHK(pthread_create(&waiter, NULL, waiter_thread, NULL));
   SYSCHK(pthread_create(&owner, NULL, owner_thread, NULL));
-  /* The owner intentionally remains parked on the PI locks.  Detach it so
-   * its pthread bookkeeping does not accumulate across rwforge rounds. */
-  SYSCHK(pthread_detach(owner));
   /* A17: no-punch prime round skips the consumer thread entirely */
   int have_consumer = g_no_punch != 1;
   if (have_consumer)
@@ -283,6 +287,7 @@ void run_main_route_threads(void) {
   if (have_consumer)
     SYSCHK(pthread_join(consumer, NULL));
   SYSCHK(pthread_join(waiter, NULL));
+  SYSCHK(pthread_join(owner, NULL));
 }
 
 static void do_one_write(uintptr_t target, const char *desc, int mode) {
