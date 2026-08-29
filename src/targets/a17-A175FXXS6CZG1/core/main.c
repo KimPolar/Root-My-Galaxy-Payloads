@@ -262,8 +262,12 @@ void run_main_route_threads(void) {
   pthread_t waiter, owner, consumer;
   SYSCHK(pthread_create(&waiter, NULL, waiter_thread, NULL));
   SYSCHK(pthread_create(&owner, NULL, owner_thread, NULL));
+  /* The owner intentionally remains parked on the PI locks.  Detach it so
+   * its pthread bookkeeping does not accumulate across rwforge rounds. */
+  SYSCHK(pthread_detach(owner));
   /* A17: no-punch prime round skips the consumer thread entirely */
-  if (g_no_punch != 1)
+  int have_consumer = g_no_punch != 1;
+  if (have_consumer)
     SYSCHK(pthread_create(&consumer, NULL, consumer_thread, NULL));
   while (!atomic_load(&waiter_waiting) || !atomic_load(&owner_started))
     usleep(1000);
@@ -271,6 +275,14 @@ void run_main_route_threads(void) {
   errno = 0;
   futex_op(&f_wait, FUTEX_CMP_REQUEUE_PI, 1, (void *)1, &f_pi_target, 0);
   while (!atomic_load(&route_done)) usleep(5000);
+  /* consumer_stop used to remain zero, leaving every old consumer alive.
+   * reset_main_route_state() then reactivated all of them on the next round,
+   * producing multiple sched_setattr races against a single waiter. */
+  atomic_store(&punch_consume_go, 0);
+  atomic_store(&punch_consume_stop, 1);
+  if (have_consumer)
+    SYSCHK(pthread_join(consumer, NULL));
+  SYSCHK(pthread_join(waiter, NULL));
 }
 
 static void do_one_write(uintptr_t target, const char *desc, int mode) {
