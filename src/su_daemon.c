@@ -1065,6 +1065,18 @@ static pid_t follow_payload_log(const char *path, int transport_fd,
   }
 }
 
+static volatile sig_atomic_t supervised_payload_pid = -1;
+
+static void stop_supervised_payload(int signo) {
+  pid_t pid = (pid_t)supervised_payload_pid;
+  if (pid > 0) {
+    /* The payload calls setsid(), so its PID is also its process-group ID.
+     * Signal both forms to cover the short fork-to-setsid race. */
+    kill(-pid, signo);
+    kill(pid, signo);
+  }
+}
+
 static int payload_runner_main(int argc, char **argv) {
   if (argc != 5) {
     return 2;
@@ -1106,6 +1118,10 @@ static int payload_runner_main(int argc, char **argv) {
     return errno;
   }
   if (payload_pid > 0) {
+    supervised_payload_pid = payload_pid;
+    signal(SIGTERM, stop_supervised_payload);
+    signal(SIGINT, stop_supervised_payload);
+    signal(SIGQUIT, stop_supervised_payload);
     int status = 0;
     pid_t waited = follow_payload_log(argv[4], transport_fd, payload_pid,
                                       &status);
@@ -1116,6 +1132,7 @@ static int payload_runner_main(int argc, char **argv) {
       return saved_errno;
     }
     close(transport_fd);
+    supervised_payload_pid = -1;
     if (WIFEXITED(status)) {
       return WEXITSTATUS(status);
     }
