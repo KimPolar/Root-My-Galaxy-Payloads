@@ -8,6 +8,8 @@ between KMIs.
 
 | File | Target | KMI | Purpose |
 | --- | --- | --- | --- |
+| `android16-6.12_kernelsu-A175FXXS6CZG1-kdp.ko` | `SM-A175F`, `A175FXXS6CZG1` | `android16-6.12` | Exact CZG1 no-patch-text module; full-release vermagic and manual-relocation audit verified, hardware load pending |
+| `ksud-A175FXXS6CZG1-kdp` | Same exact A17 build | `android16-6.12` | Late-load binary embedding the exact 6.12 module; hardware load pending |
 | `android15-6.6_kernelsu-s25u-kdp.ko` | `SM-S938N`, `S938NKSUACZF1` | `android15-6.6` | Standalone reference module from the previously deployed S25U build |
 | `ksud-s25u-kdp` | `SM-S938N`, `S938NKSUACZF1` | `android15-6.6` | Late-load binary embedding the 6.6 module |
 | `android15-6.6_kernelsu-A566EXXSCCZG6-kdp.ko` | `SM-A566E`, `A566EXXSCCZG6` | `android15-6.6` | Exact A56 module with target `vermagic`, audited for manual relocation; live text patching disabled for Exynos EL2 |

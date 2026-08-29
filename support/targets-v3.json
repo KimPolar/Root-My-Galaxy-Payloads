@@ -2,6 +2,25 @@
   "schemaVersion": 3,
   "payloads": [
     {
+      "payloadId": "a17-A175FXXS6CZG1",
+      "displayName": "Galaxy A17 (SM-A175F CZG1) | Kernel 6.12.38 | Experimental",
+      "models": [
+        "SM-A175F"
+      ],
+      "kernelVersions": [
+        "6.12.38"
+      ],
+      "requiresFreshP0Session": true,
+      "exploit": {
+        "url": "https://raw.githubusercontent.com/KimPolar/Root-My-Galaxy-Payloads/main/artifacts/a17-A175FXXS6CZG1/cve-2026-43499-app.so",
+        "size": 136952
+      },
+      "kernelsu": {
+        "url": "https://raw.githubusercontent.com/KimPolar/Root-My-Galaxy-Payloads/main/kernelsu/ksud-A175FXXS6CZG1-kdp",
+        "size": 4928048
+      }
+    },
+    {
       "payloadId": "galaxy-s25-series-2026-06-07",
       "displayName": "Galaxy S25 series | Kernel 6.6.98",
       "models": [

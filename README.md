@@ -15,6 +15,7 @@ It intentionally does not contain Android application source code.
 
 | Payload | Compatible models | Kernel version | Status |
 | --- | --- | --- | --- |
+| `a17-A175FXXS6CZG1` | Galaxy A17 `SM-A175F` | `6.12.38` | Experimental: app payload and exact-ABI KernelSU 6.12 build/audit complete; app flow hardware validation pending |
 | `galaxy-s25-series-2026-06-07` | Galaxy S25, S25+, S25 Edge, and S25 Ultra regional models | `6.6.98` | Device-tested |
 | `e3q-S928USQS6DZF2` | Galaxy S24 Ultra `SM-S928U1` | `6.1.145` | Device-tested |
 | `e2s-S926BXXUEDZDR` | Galaxy S24+ `SM-S926B` | `6.1.157` | Device-tested |
@@ -47,6 +48,7 @@ schema version 3. `targets-v2.json` is retained for released 0.2.3 clients.
 
 ```sh
 make TARGET=pa3q-S938NKSUACZF1 ANDROID_NDK_HOME=/path/to/android-ndk
+make TARGET=a17-A175FXXS6CZG1 ANDROID_NDK_HOME=/path/to/android-ndk
 make TARGET=e3q-S928USQS6DZF2 ANDROID_NDK_HOME=/path/to/android-ndk
 make TARGET=e2s-S926BXXUEDZDR ANDROID_NDK_HOME=/path/to/android-ndk
 make TARGET=essi-S721NKSSCDZF3 ANDROID_NDK_HOME=/path/to/android-ndk
@@ -92,5 +94,7 @@ The SM-A366W AYG1 device validation is in
 The experimental SM-S916B FZG1 shell port and its exact hardware evidence are in [`docs/SM-S916B-S916BXXSAFZG1.md`](docs/SM-S916B-S916BXXSAFZG1.md).
 The SM-A536E GZG3 device validation is in
 [`docs/SM-A536E-A536EXXSNGZG3.md`](docs/SM-A536E-A536EXXSNGZG3.md).
+The SM-A175F CZG1 app integration and exact KernelSU 6.12 build gate are in
+[`docs/SM-A175F-A175FXXS6CZG1.md`](docs/SM-A175F-A175FXXS6CZG1.md).
 
 Use only on devices you own or are explicitly authorized to test.
