@@ -3648,8 +3648,10 @@ int run_rwforge(void) {
     return 1;
   if (getenv("GL_DEFER_CLOSE"))
     pr_info("rwforge: GL_DEFER_CLOSE=1 — carrier skbs held until exit\n");
+  int outer_max = env_int_range("GL_RWF_OUTERS", 2, 1, 2);
+  pr_info("rwforge: outer attempts=%d\n", outer_max);
   int installed = 0;
-  for (int outer = 1; outer <= 2 && !installed; outer++) {
+  for (int outer = 1; outer <= outer_max && !installed; outer++) {
     if (!getenv("NO_PRIME_ROUND")) {
       pr_info("rwforge: no-punch prime round\n");
       g_no_punch = 1;
@@ -3658,9 +3660,9 @@ int run_rwforge(void) {
     }
     installed = rwf_install();
     if (installed) break;
-    pr_warning("rwforge install failed (outer %d/2)%s\n", outer,
-               outer == 1 ? " — re-reclaiming" : "");
-    if (outer == 2)
+    pr_warning("rwforge install failed (outer %d/%d)%s\n", outer, outer_max,
+               outer < outer_max ? " — re-reclaiming" : "");
+    if (outer == outer_max)
       pr_error("rwforge install failed\n");
     /* re-reclaim and retry once */
     pb = prepare_pipe_buffer_page();

