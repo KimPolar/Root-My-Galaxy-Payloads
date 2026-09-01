@@ -42,7 +42,7 @@ The current release payload is:
 ```text
 artifacts/a17-A175FXXS6CZG1/cve-2026-43499-app.so
 size: 104128
-SHA-256: 3a98dfd9bcf33760346b492475ed45996750e3412f91fd21b057a5585c893d58
+SHA-256: 519f0defc2f74ba55f798061ac16feec25548c7cc5cc24229cf3de945fad2dda
 ```
 
 This artifact is built by the clean `a17x-A175FXXS6CZG1` profile using the
@@ -57,9 +57,12 @@ timeout to at least 90 seconds, and permits only one full allocator attempt per
 run. A failed leak must return to the app rather than rebuilding a dirty
 allocator state in the same run.
 
-CZG1 BTF type 587 reports `sizeof(struct mm_struct) == 1216` (`0x4c0`).
-Because that size is already 64-byte cacheline aligned, the KernelSnitch SLUB
-candidate stride is `0x4c0`, not the older A17 profile's carried `0x500`.
+CZG1 BTF type 587 reports `sizeof(struct mm_struct) == 1216` (`0x4c0`), but
+that C type size does not establish the effective SLUB object stride. A prior
+CZG1 hardware leak returned an object at `base + 0x1e00`, exactly slot 6 with
+the established A17 `0x500` stride; the same address is not aligned to a
+`0x4c0` candidate. The KernelSnitch search therefore uses the runtime-proven
+`0x500` allocator stride.
 The search range ends at direct-map alias `0xffffff8140000000`, rounded up from
 the exact final System RAM range in the supplied CZG1 `/proc/iomem` capture.
 

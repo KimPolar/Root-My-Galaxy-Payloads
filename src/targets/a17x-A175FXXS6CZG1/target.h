@@ -3,7 +3,7 @@
 
 /* Clean PORTING.md profile for SM-A175F firmware A175FXXS6CZG1. */
 #if defined(APP_PAYLOAD) && APP_PAYLOAD
-#define BUILD_VARIANT_LABEL "a17x-A175FXXS6CZG1-porting-app-mm4c0-single"
+#define BUILD_VARIANT_LABEL "a17x-A175FXXS6CZG1-porting-app-mm500-single"
 #define APP_PHYS_P0_ORACLE 1
 #define APP_PHYS_VIRTUAL_BASE_ORACLE 1
 #define KIMAGE_VIRTUAL_BASE_MIN 0xffffffc080000000ULL
@@ -21,7 +21,12 @@
 #define P0_PHYS_OFFSET 0x40000000ULL
 #define P0_KERNEL_PHYS_LOAD 0x40000000ULL
 #define SKB_DATA_DELTA (-0xe80LL)
-#define MM_STRUCT_SZ 0x4c0
+/*
+ * BTF reports sizeof(struct mm_struct) == 0x4c0, but the CZG1 SLUB cache
+ * rounds the object stride to 0x500.  The runtime leak observed an object at
+ * base + 0x1e00, exactly slot 6 at this allocator stride.
+ */
+#define MM_STRUCT_SZ 0x500
 #define MM_ORDER 3
 #define KMALLOC_CACHE_TYPES 3
 #define KMALLOC_CGROUP_TYPE 2
