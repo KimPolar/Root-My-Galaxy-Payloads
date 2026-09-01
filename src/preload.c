@@ -128,6 +128,13 @@ __attribute__((constructor)) static void load(void) {
 
   int max_attempts = env_int(
       "EXPLOIT_ATTEMPTS", DEFAULT_EXPLOIT_ATTEMPTS, 1, 64);
+#if defined(APP_EXPLOIT_ATTEMPTS_CAP)
+  if (max_attempts > APP_EXPLOIT_ATTEMPTS_CAP) {
+    pr_info("exploit attempt cap requested=%d cap=%d\n",
+            max_attempts, APP_EXPLOIT_ATTEMPTS_CAP);
+    max_attempts = APP_EXPLOIT_ATTEMPTS_CAP;
+  }
+#endif
   int base_delay = env_int(
       "PSELECT_DELAY_USEC", DEFAULT_PSELECT_DELAY_USEC, 0, 1000000);
   int attempt_timeout_sec = env_int(
