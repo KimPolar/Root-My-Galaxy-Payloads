@@ -19,9 +19,9 @@ The exploit offsets are selected by the complete `uname -r`; the shorter
 Build the app payload and its bootstrap helper with:
 
 ```sh
-make TARGET=a17-A175FXXS6CZG1 \
+make TARGET=a17x-A175FXXS6CZG1 \
   ANDROID_NDK_HOME=/path/to/android-ndk
-make TARGET=a17-A175FXXS6CZG1 \
+make TARGET=a17x-A175FXXS6CZG1 \
   ANDROID_NDK_HOME=/path/to/android-ndk release
 ```
 
@@ -41,9 +41,13 @@ The current release payload is:
 
 ```text
 artifacts/a17-A175FXXS6CZG1/cve-2026-43499-app.so
-size: 136952
-SHA-256: 26b54cfca3e3eb558a040114630774cc73a949acb691b918c0b1c109bd9eec52
+size: 104128
+SHA-256: 5f5674f2e3c349bfaddfe46c1042307c2f94d75716cc19afd9bf68d246f7ec2f
 ```
+
+This artifact is built by the clean `a17x-A175FXXS6CZG1` profile using the
+shared payload sources and the exact CZG1 BTF layouts. The published payload
+ID and artifact path remain `a17-A175FXXS6CZG1` for application compatibility.
 
 ## KernelSU 6.12 status
 

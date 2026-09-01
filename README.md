@@ -48,7 +48,7 @@ schema version 3. `targets-v2.json` is retained for released 0.2.3 clients.
 
 ```sh
 make TARGET=pa3q-S938NKSUACZF1 ANDROID_NDK_HOME=/path/to/android-ndk
-make TARGET=a17-A175FXXS6CZG1 ANDROID_NDK_HOME=/path/to/android-ndk
+make TARGET=a17x-A175FXXS6CZG1 ANDROID_NDK_HOME=/path/to/android-ndk
 make TARGET=e3q-S928USQS6DZF2 ANDROID_NDK_HOME=/path/to/android-ndk
 make TARGET=e2s-S926BXXUEDZDR ANDROID_NDK_HOME=/path/to/android-ndk
 make TARGET=essi-S721NKSSCDZF3 ANDROID_NDK_HOME=/path/to/android-ndk

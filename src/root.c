@@ -352,7 +352,11 @@ static int install_workqueue_umh_root(int fd) {
   if (!root_read32(fd, pwq + PWQ_WORK_COLOR_OFF, &color) ||
       !root_read32(fd, pwq + PWQ_REFCNT_OFF, &refcnt) ||
       !root_read32(fd, pwq + PWQ_NR_ACTIVE_OFF, &nr_active) ||
+#if defined(PWQ_MAX_ACTIVE_FROM_WQ) && PWQ_MAX_ACTIVE_FROM_WQ
+      !root_read32(fd, wq + WQ_MAX_ACTIVE_OFF, &max_active)) {
+#else
       !root_read32(fd, pwq + PWQ_MAX_ACTIVE_OFF, &max_active)) {
+#endif
     pr_error("root umh pwq state read failed\n");
     goto cleanup;
   }
