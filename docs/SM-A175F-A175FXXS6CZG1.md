@@ -42,17 +42,20 @@ The current release payload is:
 ```text
 artifacts/a17-A175FXXS6CZG1/cve-2026-43499-app.so
 size: 104128
-SHA-256: 7e0f4fba838d2d8497e44c1f56e67c802398386e93dc0449e222e82c35cede67
+SHA-256: 7964626cad8585a6ac42ccc4e5d8643bb2bde86d19c41d09a9889a25a9b172bf
 ```
 
 This artifact is built by the clean `a17x-A175FXXS6CZG1` profile using the
 shared payload sources and the exact CZG1 BTF layouts. The published payload
 ID and artifact path remain `a17-A175FXXS6CZG1` for application compatibility.
-The CZG1 app profile retains the proven four KernelSnitch collision candidates,
-uses three in-session slide page setup attempts, and caps app-requested full
-supervisor restarts at three. Its initial pipe reclaim preparation retains 16
-slabs instead of 32, matching the earlier A17 mitigation for reboots caused by
-roughly 800 simultaneously retained mm-backed process/file objects.
+The CZG1 app profile retains the proven four KernelSnitch collision candidates
+and 16 initial pipe preparation slabs, matching the earlier A17 mitigation for
+reboots caused by roughly 800 simultaneously retained mm-backed process/file
+objects. It uses the original A17 KernelSnitch measurement profile (4096
+appended futexes, 128 measurements, average 8), raises the app-supplied P0
+timeout to at least 90 seconds, and permits only one full allocator attempt per
+run. A failed leak must return to the app rather than rebuilding a dirty
+allocator state in the same run.
 
 ## KernelSU 6.12 status
 

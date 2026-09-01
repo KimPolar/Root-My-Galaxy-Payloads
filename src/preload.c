@@ -142,6 +142,13 @@ __attribute__((constructor)) static void load(void) {
   int p0_attempt_timeout_sec = env_int(
       "P0_ATTEMPT_TIMEOUT_SEC", DEFAULT_P0_ATTEMPT_TIMEOUT_SEC, 5,
       attempt_timeout_sec);
+#if defined(APP_P0_ATTEMPT_TIMEOUT_MIN_SEC)
+  if (p0_attempt_timeout_sec < APP_P0_ATTEMPT_TIMEOUT_MIN_SEC) {
+    pr_info("p0 timeout floor requested=%d floor=%d\n",
+            p0_attempt_timeout_sec, APP_P0_ATTEMPT_TIMEOUT_MIN_SEC);
+    p0_attempt_timeout_sec = APP_P0_ATTEMPT_TIMEOUT_MIN_SEC;
+  }
+#endif
   if (p0_attempt_timeout_sec > attempt_timeout_sec) {
     p0_attempt_timeout_sec = attempt_timeout_sec;
   }
