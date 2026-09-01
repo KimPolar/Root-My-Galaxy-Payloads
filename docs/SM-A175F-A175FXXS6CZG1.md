@@ -42,7 +42,7 @@ The current release payload is:
 ```text
 artifacts/a17-A175FXXS6CZG1/cve-2026-43499-app.so
 size: 104128
-SHA-256: fa8ee2a9f03f98727b1130ff55dde2627350267d70b1857fbcf61b5cb0c0ef43
+SHA-256: b4b4c144c6e8bf7c6020495107db1b5cac640eda0bc78099b0adc0d276652b95
 ```
 
 This artifact is built by the clean `a17x-A175FXXS6CZG1` profile using the
@@ -50,8 +50,10 @@ shared payload sources and the exact CZG1 BTF layouts. The published payload
 ID and artifact path remain `a17-A175FXXS6CZG1` for application compatibility.
 The initial pipe oracle retains the proven exact four-collision correlation and
 16 preparation slabs. The later kernel-page leak keeps its proven 32-slab
-geometry but collects six measured collision addresses and requires five to
-agree, tolerating one timing false positive without weakening the pipe oracle.
+geometry but collects ten measured collision addresses and requires six to
+agree, tolerating up to four timing false positives without weakening the pipe
+oracle. It also records the best correlation score when no address qualifies,
+so subsequent hardware logs expose the measured margin directly.
 Both use three confirmation measurements and the clean port's
 hardware-successful timing profile (2048 appended futexes, 64 measurements,
 average 8). The app-supplied P0 timeout is raised to at least 90 seconds and

