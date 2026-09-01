@@ -42,21 +42,21 @@ The current release payload is:
 ```text
 artifacts/a17-A175FXXS6CZG1/cve-2026-43499-app.so
 size: 104128
-SHA-256: b34164d968843ef3873a3558ad701ff1848977cd66dd0d4d8709c157140afe88
+SHA-256: fa8ee2a9f03f98727b1130ff55dde2627350267d70b1857fbcf61b5cb0c0ef43
 ```
 
 This artifact is built by the clean `a17x-A175FXXS6CZG1` profile using the
 shared payload sources and the exact CZG1 BTF layouts. The published payload
 ID and artifact path remain `a17-A175FXXS6CZG1` for application compatibility.
-The CZG1 app profile retains the proven four KernelSnitch collision candidates
-with three confirmation measurements. It keeps 16 initial pipe preparation
-slabs, matching the earlier A17 mitigation for allocator-pressure reboots, but
-restores the later kernel-page preparation to its proven 32-slab geometry. The
-collision timing profile is the clean port's hardware-successful configuration
-(2048 appended futexes, 64 measurements, average 8). The app-supplied P0
-timeout is raised to at least 90 seconds and only one full allocator attempt is
-permitted per run. A failed leak must return to the app rather than rebuilding
-a dirty allocator state in the same run.
+The initial pipe oracle retains the proven exact four-collision correlation and
+16 preparation slabs. The later kernel-page leak keeps its proven 32-slab
+geometry but collects six measured collision addresses and requires five to
+agree, tolerating one timing false positive without weakening the pipe oracle.
+Both use three confirmation measurements and the clean port's
+hardware-successful timing profile (2048 appended futexes, 64 measurements,
+average 8). The app-supplied P0 timeout is raised to at least 90 seconds and
+only one full allocator attempt is permitted per run. A failed leak must return
+to the app rather than rebuilding a dirty allocator state in the same run.
 
 CZG1 BTF type 587 reports `sizeof(struct mm_struct) == 1216` (`0x4c0`), but
 that C type size does not establish the effective SLUB object stride. A prior

