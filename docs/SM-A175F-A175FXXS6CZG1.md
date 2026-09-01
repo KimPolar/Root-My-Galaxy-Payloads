@@ -42,19 +42,20 @@ The current release payload is:
 ```text
 artifacts/a17-A175FXXS6CZG1/cve-2026-43499-app.so
 size: 104128
-SHA-256: 519f0defc2f74ba55f798061ac16feec25548c7cc5cc24229cf3de945fad2dda
+SHA-256: f6b8a4fc9d96485f717e172bdeac87ae1bc8d5c571dbc176b0a561d22e75dfa7
 ```
 
 This artifact is built by the clean `a17x-A175FXXS6CZG1` profile using the
 shared payload sources and the exact CZG1 BTF layouts. The published payload
 ID and artifact path remain `a17-A175FXXS6CZG1` for application compatibility.
 The CZG1 app profile retains the proven four KernelSnitch collision candidates
-and 16 initial pipe preparation slabs, matching the earlier A17 mitigation for
-reboots caused by roughly 800 simultaneously retained mm-backed process/file
-objects. It uses the original A17 KernelSnitch measurement profile (4096
-appended futexes, 128 measurements, average 8), raises the app-supplied P0
-timeout to at least 90 seconds, and permits only one full allocator attempt per
-run. A failed leak must return to the app rather than rebuilding a dirty
+and confirms every candidate five times to reject timing false positives. It
+keeps 16 initial pipe preparation slabs, matching the earlier A17 mitigation
+for reboots caused by roughly 800 simultaneously retained mm-backed
+process/file objects. It uses the original A17 KernelSnitch measurement profile
+(4096 appended futexes, 128 measurements, average 8), raises the app-supplied
+P0 timeout to at least 90 seconds, and permits only one full allocator attempt
+per run. A failed leak must return to the app rather than rebuilding a dirty
 allocator state in the same run.
 
 CZG1 BTF type 587 reports `sizeof(struct mm_struct) == 1216` (`0x4c0`), but
