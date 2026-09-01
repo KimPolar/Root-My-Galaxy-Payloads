@@ -42,7 +42,7 @@ The current release payload is:
 ```text
 artifacts/a17-A175FXXS6CZG1/cve-2026-43499-app.so
 size: 104128
-SHA-256: 5f5674f2e3c349bfaddfe46c1042307c2f94d75716cc19afd9bf68d246f7ec2f
+SHA-256: 44a584b2cb59b8ef4039222c95568fbbe8d03bc097b65af0b58c82ba9be96234
 ```
 
 This artifact is built by the clean `a17x-A175FXXS6CZG1` profile using the
