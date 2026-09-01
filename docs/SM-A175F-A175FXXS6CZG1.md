@@ -42,7 +42,7 @@ The current release payload is:
 ```text
 artifacts/a17-A175FXXS6CZG1/cve-2026-43499-app.so
 size: 104128
-SHA-256: 7964626cad8585a6ac42ccc4e5d8643bb2bde86d19c41d09a9889a25a9b172bf
+SHA-256: 3a98dfd9bcf33760346b492475ed45996750e3412f91fd21b057a5585c893d58
 ```
 
 This artifact is built by the clean `a17x-A175FXXS6CZG1` profile using the
@@ -56,6 +56,12 @@ appended futexes, 128 measurements, average 8), raises the app-supplied P0
 timeout to at least 90 seconds, and permits only one full allocator attempt per
 run. A failed leak must return to the app rather than rebuilding a dirty
 allocator state in the same run.
+
+CZG1 BTF type 587 reports `sizeof(struct mm_struct) == 1216` (`0x4c0`).
+Because that size is already 64-byte cacheline aligned, the KernelSnitch SLUB
+candidate stride is `0x4c0`, not the older A17 profile's carried `0x500`.
+The search range ends at direct-map alias `0xffffff8140000000`, rounded up from
+the exact final System RAM range in the supplied CZG1 `/proc/iomem` capture.
 
 ## KernelSU 6.12 status
 
